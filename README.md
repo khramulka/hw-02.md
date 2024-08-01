@@ -26,7 +26,7 @@
 Приложите в файл README.md текст использованных команд в GitHub.
 
 
-![alt text]([http://url/to/img.png](https://github.com/khramulka/hw-02.md/blob/main/Screenshot_2.png))
+![alt text](https://github.com/khramulka/hw-02.md/blob/main/Screenshot_2.png)
 
 ---
 
@@ -56,7 +56,7 @@
 
 Приложите в файл README.md текст использованных команд в GitHub
 
-
+![alt text](https://github.com/khramulka/hw-02.md/blob/main/Screenshot_3.png)
 ---
 
 ### Задание 3
