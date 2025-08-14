@@ -7,8 +7,13 @@
 1. Ознакомьтесь с [документацией к security-groups в Yandex Cloud](https://cloud.yandex.ru/docs/vpc/concepts/security-groups?from=int-console-help-center-or-nav). 
 Этот функционал понадобится к следующей лекции.
 
+------
+
 ### Решение 0
 
+
+------
+------
 
 ### Задание 1
 В качестве ответа всегда полностью прикладывайте ваш terraform-код в git.
