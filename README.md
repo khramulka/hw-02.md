@@ -63,6 +63,181 @@
 
 ### Решение2
 
+main.tf
+
+```
+# Создаем VPC сеть
+resource "yandex_vpc_network" "develop" {
+  name = var.vpc_name
+}
+
+# Создаем подсеть
+resource "yandex_vpc_subnet" "develop" {
+  name           = var.vpc_name
+  zone           = var.default_zone
+  network_id     = yandex_vpc_network.develop.id
+  v4_cidr_blocks = var.default_cidr
+}
+
+# Получаем образ ОС
+data "yandex_compute_image" "ubuntu" {
+  family = var.vm_web_image_family
+}
+
+# Создаем виртуальную машину
+resource "yandex_compute_instance" "platform" {
+  name = var.vm_web_name
+
+  platform_id = var.vm_web_platform_id
+
+  resources {
+    cores         = var.vm_web_cores
+    memory        = var.vm_web_memory
+    core_fraction = var.vm_web_core_fraction
+  }
+
+  boot_disk {
+    initialize_params {
+      image_id = data.yandex_compute_image.ubuntu.image_id
+    }
+  }
+
+  scheduling_policy {
+    preemptible = var.vm_web_preemptible
+  }
+
+  network_interface {
+    subnet_id = yandex_vpc_subnet.develop.id
+    nat       = var.vm_web_nat
+  }
+
+  metadata = var.vms_metadata
+
+  allow_stopping_for_update = true
+}
+
+
+```
+
+variables.tf
+
+```
+variable "token" {
+  type        = string
+  description = "OAuth-token; https://cloud.yandex.ru/docs/iam/concepts/authorization/oauth-token"
+}
+
+variable "cloud_id" {
+  type        = string
+  description = "https://cloud.yandex.ru/docs/resource-manager/operations/cloud/get-id"
+}
+
+variable "folder_id" {
+  type        = string
+  description = "https://cloud.yandex.ru/docs/resource-manager/operations/folder/get-id"
+}
+
+variable "default_zone" {
+  type        = string
+  default     = "ru-central1-a"
+  description = "https://cloud.yandex.ru/docs/overview/concepts/geo-scope"
+}
+
+variable "default_cidr" {
+  type        = list(string)
+  default     = ["10.0.1.0/24"]
+  description = "Список CIDR блоков для подсети"
+}
+
+variable "vpc_name" {
+  type        = string
+  default     = "develop"
+  description = "VPC network & subnet name"
+}
+
+variable "vms_ssh_root_key" {
+  type        = string
+  description = "ssh-keygen -t ed25519"
+}
+
+variable "vms_resources" {
+  type = map(map(any))
+  default = {
+    vm_web = {
+      core_fraction = 5
+      cores         = 2
+      memory        = 1
+    }
+    vm_db = {
+      core_fraction = 20
+      cores         = 2
+      memory        = 2
+    }
+  }
+  description = "Resource configurations for VMs"
+}
+
+variable "vms_metadata" {
+  type = map(string)
+  default = {
+    "serial-port-enable" = "1"
+    "ssh-keys"           = "ubuntu:ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMzPxyrg408uoTpwNEJwtWKaFxH6EbSbbjBHd7i3NepU khramulka@yandex.ru"
+  }
+  description = "Metadata for VMs"
+}
+
+# Новые переменные для ВМ
+variable "vm_web_name" {
+  type        = string
+  default     = "netology-develop-platform-web"
+  description = "Имя виртуальной машины"
+}
+
+variable "vm_web_platform_id" {
+  type        = string
+  default     = "standard-v1"
+  description = "Платформа ВМ"
+}
+
+variable "vm_web_image_family" {
+  type        = string
+  default     = "ubuntu-2004-lts"
+  description = "Семейство образов ОС"
+}
+
+variable "vm_web_cores" {
+  type        = number
+  default     = 2
+  description = "Количество ядер"
+}
+
+variable "vm_web_memory" {
+  type        = number
+  default     = 1
+  description = "Количество ОЗУ"
+}
+
+variable "vm_web_core_fraction" {
+  type        = number
+  default     = 5
+  description = "Доля процессорного времени"
+}
+
+variable "vm_web_preemptible" {
+  type        = bool
+  default     = false
+  description = "Использовать преэмптивную ВМ"
+}
+
+variable "vm_web_nat" {
+  type        = bool
+  default     = true
+  description = "Включить NAT"
+}
+
+```
+
+![1](/img/2.1.png)
 
 
 ------
@@ -74,6 +249,67 @@
 
    
 ### Решение 3
+
+vms_platform.tf
+```
+# Переменные для второй ВМ (db)
+variable "vm_db_name" {
+  type        = string
+  default     = "netology-develop-platform-db"
+  description = "Имя виртуальной машины"
+}
+
+
+variable "vm_db_platform_id" {
+  type        = string
+  default     = "standard-v1"
+  description = "Платформа ВМ"
+}
+
+variable "vm_db_image_family" {
+  type        = string
+  default     = "ubuntu-2004-lts"
+  description = "Семейство образов ОС"
+}
+
+variable "vm_db_cores" {
+  type        = number
+  default     = 2
+  description = "Количество ядер"
+}
+
+variable "vm_db_memory" {
+  type        = number
+  default     = 2
+  description = "Количество ОЗУ"
+}
+
+variable "vm_db_core_fraction" {
+  type        = number
+  default     = 20
+  description = "Доля процессорного времени"
+}
+
+variable "vm_db_preemptible" {
+  type        = bool
+  default     = false
+  description = "Использовать преэмптивную ВМ"
+}
+
+variable "vm_db_nat" {
+  type        = bool
+  default     = true
+  description = "Включить NAT"
+}
+
+variable "vm_db_zone" {
+  type        = string
+  default     = "ru-central1-b"
+  description = "Зона размещения ВМ"
+}
+
+```
+![1](/img/3.2.png)
 
 ------
 
@@ -88,7 +324,28 @@
 
 ### Решение 4
 
+outputs.md
 
+```
+output "vm_info" {
+  value = {
+    web = {
+      instance_name = yandex_compute_instance.platform_web.name
+      external_ip   = yandex_compute_instance.platform_web.network_interface.0.nat_ip_address
+      fqdn          = yandex_compute_instance.platform_web.fqdn
+    },
+    db = {
+      instance_name = yandex_compute_instance.platform_db.name
+      external_ip   = yandex_compute_instance.platform_db.network_interface.0.nat_ip_address
+      fqdn          = yandex_compute_instance.platform_db.fqdn
+    }
+  }
+  description = "Информация о созданных виртуальных машинах"
+}
+
+```
+
+![1](/img/4.1.png)
 ------
 
 ### Задание 5
@@ -100,7 +357,17 @@
 
 ### Решение 5
 
+```
+locals {
+  vm_names = {
+    web = "${var.vpc_name}-${var.vm_web_platform_id}-web"
+    db  = "${var.vpc_name}-${var.vm_db_platform_id}-db"
+  }
+}
 
+```
+
+![1](/img/5.1.png)
 ------
 
 ### Задание 6
@@ -143,8 +410,139 @@
 
 ### Решение 6
 ------
+variables.tf
+```
+variable "token" {
+  type        = string
+  description = "OAuth-token; https://cloud.yandex.ru/docs/iam/concepts/authorization/oauth-token"
+}
 
+variable "cloud_id" {
+  type        = string
+  description = "https://cloud.yandex.ru/docs/resource-manager/operations/cloud/get-id"
+}
 
+variable "folder_id" {
+  type        = string
+  description = "https://cloud.yandex.ru/docs/resource-manager/operations/folder/get-id"
+}
 
+variable "default_zone" {
+  type        = string
+  default     = "ru-central1-a"
+  description = "https://cloud.yandex.ru/docs/overview/concepts/geo-scope"
+}
 
+variable "default_cidr" {
+  type        = list(string)
+  default     = ["10.0.1.0/24"]
+  description = "Список CIDR блоков для подсети"
+}
+
+variable "vpc_name" {
+  type        = string
+  default     = "develop"
+  description = "VPC network & subnet name"
+}
+
+variable "vms_ssh_root_key" {
+  type        = string
+  description = "ssh-keygen -t ed25519"
+}
+
+# Новая переменная для ресурсов ВМ
+variable "vms_resources" {
+  type = map(object({
+    cores         = number
+    memory        = number
+    core_fraction = number
+  }))
+  default = {
+    web = {
+      cores         = 2
+      memory        = 1
+      core_fraction = 5
+    }
+    db = {
+      cores         = 2
+      memory        = 2
+      core_fraction = 20
+    }
+  }
+  description = "Ресурсы для ВМ"
+}
+
+# Новая переменная для метаданных
+variable "vms_metadata" {
+  type = map(string)
+  default = {
+    "serial-port-enable" = "1"
+    "ssh-keys"           = "ubuntu:ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMzPxyrg408uoTpwNEJwtWKaFxH6EbSbbjBHd7i3NepU khramulka@yandex.ru"
+  }
+  description = "Метаданные для ВМ"
+}
+
+variable "vm_web_platform_id" {
+  type        = string
+  default     = "standard-v1"
+  description = "Платформа ВМ"
+}
+
+variable "vm_web_image_family" {
+  type        = string
+  default     = "ubuntu-2004-lts"
+  description = "Семейство образов ОС"
+}
+
+variable "vm_db_platform_id" {
+  type        = string
+  default     = "standard-v1"
+  description = "Платформа ВМ"
+}
+
+variable "vm_db_image_family" {
+  type        = string
+  default     = "ubuntu-2004-lts"
+  description = "Семейство образов ОС"
+}
+
+# Закомментируем устаревшие переменные
+# variable "vm_web_cores" {
+#   type        = number
+#   default     = 2
+#   description = "Количество ядер"
+# }
+
+# variable "vm_web_memory" {
+#   type        = number
+#   default     = 1
+#   description = "Количество ОЗУ"
+# }
+
+# variable "vm_web_core_fraction" {
+#   type        = number
+#   default     = 5
+#   description = "Доля процессорного времени"
+# }
+
+# variable "vm_db_cores" {
+#   type        = number
+#   default     = 2
+#   description = "Количество ядер"
+# }
+
+# variable "vm_db_memory" {
+#   type        = number
+#   default     = 2
+#   description = "Количество ОЗУ"
+# }
+
+# variable "vm_db_core_fraction" {
+#   type        = number
+#   default     = 20
+#   description = "Доля процессорного времени"
+# }
+
+```
+![1](/img/6.1.png)
 ------
